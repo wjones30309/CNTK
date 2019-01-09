@@ -321,15 +321,10 @@ rnn_model_names = [dir for dir in os.listdir(rnn_base_dir)
                     if os.path.isfile(os.path.join(rnn_base_dir, dir)) and dir.rfind('.model') + len('.model') == len(dir)] if os.path.exists(rnn_base_dir) else []
 
 skip_rnn_model_names = [
-    'Bing.Malta50.proto1_128_gru_normv3_ep3_z.model', 
     'SmartReply.Base_BiLSTM_Exported_input_replaced_with_gather_for_indice_input.cntk.model',
     'SmartReply.cvae_input_replaced_with_gather_for_indice_input.cntk.model', 
-    'Bing.QueryTagger.slu.cmf.24.z.model',
-    'Speech.LC_Modified.model',
-    'Speech.lstm_pit.cntk48.ElementTimes3117.model',
-    'Speech.model.lstm.900.converted.LSTMoutputW.model', 
-    'Speech.princeton.gather.flattened.model', 
-    'Speech.scan_4layers.LSTMoutputW.model',
+    'SmartReply.SelfAtt.infer_model.cnt.model',
+	'Speech.lstm_pit.cntk48.ElementTimes3117.model',
 ]
 
 verify_with_resave = [
@@ -394,21 +389,15 @@ def test_cntk_rnn_models(model_name):
     np.random.seed(0)
     sequence_length = 10
 
-    # Special cases
-    if model_name == 'SmartReply.SelfAtt.infer_model.cnt.model':
-        for arg in model.arguments[:-1]:
+    for arg in model.arguments:
+        if model_name in models_with_sequential_data:
+            data.append(generate_sequential_data((1,sequence_length) + arg.shape))
+        elif model_name in seq_models_with_sparse_data:
             data.append(generate_sparse_data(1, sequence_length, arg.shape[0]))
-        data.append(np.array([[[1],[0],[1],[0],[1],[1],[0],[1]]]).astype(np.float32))
-    else:
-        for arg in model.arguments:
-            if model_name in models_with_sequential_data:
-                data.append(generate_sequential_data((1,sequence_length) + arg.shape))
-            elif model_name in seq_models_with_sparse_data:
-                data.append(generate_sparse_data(1, sequence_length, arg.shape[0]))
-            elif model_name in non_seq_models_with_sparse_data:
-                data.append(generate_sparse_data_non_seq(1, arg.shape[0]))
-            else:
-                data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
+        elif model_name in non_seq_models_with_sparse_data:
+            data.append(generate_sparse_data_non_seq(1, arg.shape[0]))
+        else:
+            data.append(generate_sequence_data(1, sequence_length, arg.shape[0]))
             
     # Validate model results
     if(model_name in verify_with_resave):
